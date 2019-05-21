@@ -1,17 +1,17 @@
 <?php
 
-namespace SocialiteProviders\Weixin;
+namespace SocialiteProviders\WeixinMini;
 
+use SocialiteProviders\Manager\OAuth2\User;
 use Laravel\Socialite\Two\ProviderInterface;
 use SocialiteProviders\Manager\OAuth2\AbstractProvider;
-use SocialiteProviders\Manager\OAuth2\User;
 
 class Provider extends AbstractProvider implements ProviderInterface
 {
     /**
      * Unique Provider Identifier.
      */
-    const IDENTIFIER = 'WEIXIN';
+    const IDENTIFIER = 'WEIXINMINI';
 
     /**
      * @var string
@@ -21,7 +21,7 @@ class Provider extends AbstractProvider implements ProviderInterface
     /**
      * {@inheritdoc}.
      */
-    protected $scopes = ['snsapi_userinfo'];
+    protected $scopes = [];
 
     /**
      * set Open Id.
@@ -57,10 +57,10 @@ class Provider extends AbstractProvider implements ProviderInterface
     protected function getCodeFields($state = null)
     {
         return [
-            'appid'         => $this->clientId, 'redirect_uri' => $this->redirectUrl,
+            'appid' => $this->clientId, 'redirect_uri' => $this->redirectUrl,
             'response_type' => 'code',
-            'scope'         => $this->formatScopes($this->scopes, $this->scopeSeparator),
-            'state'         => $state,
+            'scope' => $this->formatScopes($this->scopes, $this->scopeSeparator),
+            'state' => $state,
         ];
     }
 
@@ -80,12 +80,8 @@ class Provider extends AbstractProvider implements ProviderInterface
         if (in_array('snsapi_base', $this->scopes)) {
             $user = ['openid' => $this->openId];
         } else {
-            $response = $this->getHttpClient()->get('https://api.weixin.qq.com/sns/userinfo', [
-                'query' => [
-                    'access_token' => $token,
-                    'openid'       => $this->openId,
-                    'lang'         => 'zh_CN',
-                ],
+            $response = $this->getHttpClient()->get('https://api.weixin.qq.com/sns/jscode2session', [
+                'query' => $this->getTokenFields($token),
             ]);
 
             $user = json_decode($response->getBody(), true);
@@ -100,11 +96,11 @@ class Provider extends AbstractProvider implements ProviderInterface
     protected function mapUserToObject(array $user)
     {
         return (new User())->setRaw($user)->map([
-            'id'       => $user['openid'],
+            'id' => $user['openid'],
             'nickname' => isset($user['nickname']) ? $user['nickname'] : null,
-            'avatar'   => isset($user['headimgurl']) ? $user['headimgurl'] : null,
-            'name'     => null,
-            'email'    => null,
+            'avatar' => isset($user['headimgurl']) ? $user['headimgurl'] : null,
+            'name' => null,
+            'email' => null,
         ]);
     }
 
@@ -115,7 +111,7 @@ class Provider extends AbstractProvider implements ProviderInterface
     {
         return [
             'appid' => $this->clientId, 'secret' => $this->clientSecret,
-            'code'  => $code, 'grant_type' => 'authorization_code',
+            'js_code' => $code, 'grant_type' => 'authorization_code',
         ];
     }
 
